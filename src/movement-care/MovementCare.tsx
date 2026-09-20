@@ -426,6 +426,8 @@ export function MovementCare() {
               {queue.map((item, index) => {
                 const info = nameOf.get(item.ulid);
                 const status = resultStatus(item.state);
+                                const due = item.state.nextAction?.dueAt;
+                const overdue = due ? new Date(due).getTime() < Date.now() : false;
                 return (
                   <Button key={item.ulid} variant="ghost" onClick={() => setSelected(item.ulid)}
                     className={cn("h-auto w-full justify-start rounded-none px-3 py-2 text-left", selected === item.ulid && "bg-primary/10")}>
@@ -440,6 +442,12 @@ export function MovementCare() {
                       </span>
                       <span className={cn("block truncate text-[10px] font-medium", status.accountable ? "text-success" : "text-destructive")}>
                         {status.result}{status.missing.length ? ` · missing ${status.missing.join(", ")}` : " · accountable"}
+                                            {due && item.state.nextAction && (
+                        <span className={cn("block truncate text-[10px] font-medium", overdue ? "text-destructive" : "text-muted-foreground")}>
+                          {overdue ? "OVERDUE · " : "Due · "}
+                          {NEXT_ACTION_LABEL[item.state.nextAction.kind]} · {new Date(due).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {item.state.nextAction.ownerName}
+                        </span>
+                      )}
                       </span>
                     </span>
                     <Badge variant={item.bucket === "P0" ? "destructive" : "outline"} className="text-[9px]">{item.bucket}</Badge>
