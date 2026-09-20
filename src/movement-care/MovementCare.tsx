@@ -816,16 +816,21 @@ function DebriefCard({ code, customer, initial, onSave, onCopy, onPreview, onClo
   const [wentBadly, setWentBadly] = useState(initial?.wentBadly ?? "");
   const [problems, setProblems] = useState(initial?.problems ?? "");
   const [saved, setSaved] = useState<{ id: string; message: string } | null>(null);
+    const [savedKey, setSavedKey] = useState("");
+  const inputKey = JSON.stringify({ done, wentWell, wentBadly, problems });
 
-  const build = () => {
+   const build = () => {
+    if (saved && savedKey === inputKey) return;
     const result = onSave({ done, wentWell, wentBadly, problems });
-    if (result) setSaved({ id: result.id, message: result.message });
+    if (result) { setSaved({ id: result.id, message: result.message }); setSavedKey(inputKey); }
   };
 
   const buildAndCopy = () => {
+    if (saved && savedKey === inputKey) { onCopy(saved.id, saved.message); return; }
     const result = onSave({ done, wentWell, wentBadly, problems });
     if (result) {
       setSaved({ id: result.id, message: result.message });
+      setSavedKey(inputKey);
       onCopy(result.id, result.message);
     }
   };
