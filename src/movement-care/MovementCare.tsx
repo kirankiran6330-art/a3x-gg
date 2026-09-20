@@ -540,7 +540,12 @@ export function MovementCare() {
                 </div>
 
                 {debriefFor?.ulid === selectedState.ulid && (
-                  <DebriefCard code={debriefFor.code} customer={nameOf.get(selectedState.ulid)?.name ?? selectedState.ulid}
+                  <DebriefCard code={debriefFor.code} customer={nameOf.get(selectedState.ulid)?.name ?? selectedState.ulid}initial={{
+  done: selectedState.tourProperty ? `Called, qualified, locked ${selectedState.tourProperty}` : "Called and qualified the customer",
+  wentWell: "Customer engaged",
+  wentBadly: "Nothing major",
+  problems: "None",
+}}
                     onSave={finishDebrief} onCopy={copyMessage} onPreview={previewMessage} onClose={() => setDebriefFor(null)} />
                 )}
 
@@ -798,17 +803,18 @@ function PlaybookDrawer({ playbook, onClose }: { playbook: (typeof CARE_PLAYBOOK
   );
 }
 
-function DebriefCard({ code, customer, onSave, onCopy, onPreview, onClose }: {
+function DebriefCard({ code, customer, initial, onSave, onCopy, onPreview, onClose }: {
   code: string; customer: string;
+  initial?: { done: string; wentWell: string; wentBadly: string; problems: string };
   onPreview: (input: { done: string; wentWell: string; wentBadly: string; problems: string }) => string;
   onSave: (input: { done: string; wentWell: string; wentBadly: string; problems: string }) => { id: string; message: string } | undefined;
   onCopy: (id: string, message: string) => void;
   onClose: () => void;
 }) {
-  const [done, setDone] = useState("");
-  const [wentWell, setWentWell] = useState("");
-  const [wentBadly, setWentBadly] = useState("");
-  const [problems, setProblems] = useState("");
+  const [done, setDone] = useState(initial?.done ?? "");
+  const [wentWell, setWentWell] = useState(initial?.wentWell ?? "");
+  const [wentBadly, setWentBadly] = useState(initial?.wentBadly ?? "");
+  const [problems, setProblems] = useState(initial?.problems ?? "");
   const [saved, setSaved] = useState<{ id: string; message: string } | null>(null);
 
   const build = () => {
@@ -816,8 +822,19 @@ function DebriefCard({ code, customer, onSave, onCopy, onPreview, onClose }: {
     if (result) setSaved({ id: result.id, message: result.message });
   };
 
+  const buildAndCopy = () => {
+    const result = onSave({ done, wentWell, wentBadly, problems });
+    if (result) {
+      setSaved({ id: result.id, message: result.message });
+      onCopy(result.id, result.message);
+    }
+  };
+
   return (
-    <div className="border-2 border-primary bg-card p-3">
+    <div
+      className="border-2 border-primary bg-card p-3"
+      onKeyDown={(event) => { if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) buildAndCopy(); }}
+    >
       <div className="flex flex-wrap items-center gap-2">
         <MessageCircle className="h-4 w-4 text-primary" />
         <p className="text-xs font-semibold">{code} is done for {customer} — wrap it up before you move on</p>
@@ -841,7 +858,12 @@ function DebriefCard({ code, customer, onSave, onCopy, onPreview, onClose }: {
         <p className="text-[10px] font-semibold uppercase text-muted-foreground">WhatsApp message being written — live</p>
         <pre className="mt-1 whitespace-pre-wrap break-words text-[11px] leading-snug">{onPreview({ done, wentWell, wentBadly, problems })}</pre>
       </div>
-      <Button size="sm" className="mt-2" onClick={build}><CheckCircle2 className="h-3.5 w-3.5" /> Make the WhatsApp update</Button>
+      <Button size="sm" className="mt-2 mr-2" onClick={buildAndCopy}>
+        <ClipboardCopy className="h-3.5 w-3.5" /> Save and copy (Ctrl+Enter)
+      </Button>
+      <Button size="sm" variant="outline" className="mt-2" onClick={build}>
+        <CheckCircle2 className="h-3.5 w-3.5" /> Make the WhatsApp update
+      </Button>
       {saved && (
         <div className="mt-2 border bg-muted/30 p-2">
           <p className="text-[10px] font-semibold uppercase text-muted-foreground">Copy this and paste it in the team WhatsApp group</p>
@@ -854,13 +876,6 @@ function DebriefCard({ code, customer, onSave, onCopy, onPreview, onClose }: {
     </div>
   );
 }
-
-const SAMPLE_INPUT = {
-  done: "Called, qualified, shared 2 properties",
-  wentWell: "Customer picked Saturday 11 AM",
-  wentBadly: "Budget ₹1,000 below our price",
-  problems: "Need inventory truth for Sobha Dream Acres",
-};
 
 /** Used only when no customer is open, so the format is always visible. */
 function sampleMessage() {
